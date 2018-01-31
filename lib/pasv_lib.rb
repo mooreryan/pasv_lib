@@ -1,4 +1,5 @@
 require "pasv_lib/version"
+require "systemu"
 
 module PasvLib
   module CoreExtensions
