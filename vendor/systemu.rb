@@ -48,6 +48,9 @@ class SystemUniversal
   class Error < RuntimeError
   end
 
+  class Eexist < Error
+  end
+
 #
 # constants
 #
@@ -128,10 +131,19 @@ class SystemUniversal
                 buf = pipe.read
                 buf = "#{ line }#{ buf }"
                 e = Marshal.load buf
-                raise unless Exception === e
-                raise e
+
+                # If Marshal load loaded a particular exception, raise it.
+                if Exception === e
+                  raise e
+                else
+                  raise
+                end
+
+                # regardless of the error raised, we want to raise SystemUniversal::Error so we have one thnig to catch.
+              rescue e
+                raise Error, "systemu: Error - process interrupted (original error: #{e.inspect})!\n#{ buf }\n"
               rescue
-                raise Error "systemu: Error - process interrupted!\n#{ buf }\n"
+                raise Error, "systemu: Error - process interrupted!\n#{ buf }\n"
               end
             end
             thread = new_thread cid, @block if @block
@@ -280,8 +292,8 @@ class SystemUniversal
 
       begin
         Dir.mkdir tmp
-      rescue Errno::EEXIST
-        raise Error if i >= max
+      rescue Errno::EEXIST => e
+        raise Eexist, e.message if i >= max
         next
       end
 
