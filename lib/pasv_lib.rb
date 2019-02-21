@@ -1,5 +1,5 @@
 require "pasv_lib/version"
-require "systemu"
+require File.join __dir__, "..", "vendor", "systemu"
 
 module PasvLib
   module CoreExtensions
@@ -35,7 +35,7 @@ module PasvLib
       include CoreExtensions::Time
 
       def run_it *a, &b
-        exit_status, stdout, stderr = systemu *a, &b
+        exit_status, stdout, stderr = SystemUniversal::Run.systemu *a, &b
 
 
         puts stdout unless stdout.empty?
