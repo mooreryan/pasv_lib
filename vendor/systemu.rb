@@ -25,7 +25,9 @@
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #
 
-# This is a modified version of systemu by me (Ryan Moore).
+# This is a (slightly) modified version of systemu by me (Ryan Moore).
+# I've only changed which errors are raised and removed the systemu
+# method from the Object class.
 
 require 'tmpdir'
 require 'socket'
@@ -45,16 +47,17 @@ class SystemUniversal
 #
 # error class
 #
+# This is now set up so any error intentially raised by systemu will inherit from SystemUniversal::Error.
   class Error < RuntimeError
   end
 
-  class Eexist < Error
+  class EEXIST < Error
   end
 
 #
 # constants
 #
-  SystemUniversal::VERSION = '2.6.5' unless SystemUniversal.send(:const_defined?, :VERSION)
+  SystemUniversal::VERSION = '2.6.5.9999' unless SystemUniversal.send(:const_defined?, :VERSION)
   def SystemUniversal.version() SystemUniversal::VERSION end
   def version() SystemUniversal::VERSION end
   def SystemUniversal.description
@@ -139,7 +142,7 @@ class SystemUniversal
                   raise
                 end
 
-                # regardless of the error raised, we want to raise SystemUniversal::Error so we have one thnig to catch.
+                  # regardless of the error raised, we want to raise SystemUniversal::Error so we have one thnig to catch.
               rescue e
                 raise Error, "systemu: Error - process interrupted (original error: #{e.inspect})!\n#{ buf }\n"
               rescue
@@ -293,7 +296,7 @@ class SystemUniversal
       begin
         Dir.mkdir tmp
       rescue Errno::EEXIST => e
-        raise Eexist, e.message if i >= max
+        raise EEXIST, e.message if i >= max
         next
       end
 
