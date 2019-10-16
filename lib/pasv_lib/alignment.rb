@@ -5,6 +5,28 @@ module PasvLib
   module Alignment
     GAP_CHARS = Set.new %w[- .]
 
+    # If the overall min of the scoring matrix is < 0, then this scales it so that the overall min becomes zero.
+    #
+    # @param scoring_matrix The scoring matrix to rescale.  E.g., Blosum::BLOSUM62.
+    #
+    # @return A new hash scaled to zero, or a deep copy of the old one if the overall min >= 0.
+    def adjust_scoring_matrix scoring_matrix
+      overal_min = scoring_matrix.values.map(&:values).flatten.min
+
+      scaling_value = overal_min < 0 ? overal_min.abs : 0
+
+      # We want a deep copy to prevent things from getting weird while using the new hash later.
+      new_matrix = {}
+      scoring_matrix.each do |residue, scores|
+        new_matrix[residue] = {}
+        scores.each do |other_residue, score|
+          new_matrix[residue][other_residue] = score + scaling_value
+        end
+      end
+
+      new_matrix
+    end
+
     # Get the columns of an aligned set of sequences.
     #
     # Any spaces in the alignment are ignored (e.g., like those spaces NCBI puts in their alignments sometimes).  Gap characters are '.' or '-'
@@ -33,6 +55,7 @@ module PasvLib
       end.transpose
     end
 
+    # @note Technically you could get a negative score if you don't have enough high scoring residue pairs to keep the total score above zero.  If this is the case, you're alignment probably isn't very good.
     def similarity_score seqs, scoring_matrix = Blosum::BLOSUM62
       raise PasvLib::Error if seqs.empty?
       return 1.0 if seqs.count == 1

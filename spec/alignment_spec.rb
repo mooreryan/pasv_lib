@@ -5,6 +5,51 @@ require "blosum"
 RSpec.describe PasvLib::Alignment do
   let(:klass) { Class.new { extend PasvLib::Alignment }}
 
+  describe "#adjust_scoring_matrix" do
+    it "rescales so the min. score is zero" do
+      scoring_matrix = {
+        "A" => { "A" => 4, "C" => -2 },
+        "C" => { "C" => 6, "A" => -3 }
+      }
+
+      expected = {
+        "A" => { "A" => 7, "C" => 1 },
+        "C" => { "C" => 9, "A" => 0 }
+      }
+
+      expect(klass.adjust_scoring_matrix scoring_matrix).to eq expected
+    end
+
+    context "min value is > 0" do
+      it "returns exact copy of matrix if min > 0" do
+        scoring_matrix = {
+          "A" => { "A" => 4, "C" => 2 },
+          "C" => { "C" => 6, "A" => 3 }
+        }
+
+        expected = {
+          "A" => { "A" => 4, "C" => 2 },
+          "C" => { "C" => 6, "A" => 3 }
+        }
+
+        expect(klass.adjust_scoring_matrix scoring_matrix).to eq expected
+      end
+
+      it "returns a deep copy/new object, not the same thing" do
+        scoring_matrix = {
+          "A" => { "A" => 4, "C" => 2 },
+          "C" => { "C" => 6, "A" => 3 }
+        }
+
+        new_matrix = klass.adjust_scoring_matrix scoring_matrix
+
+        scoring_matrix["A"]["A"] = 40000
+
+        expect(new_matrix["A"]["A"]).to eq 4
+      end
+    end
+  end
+
   describe "#alignment_columns" do
     it "returns an ary for each column in the alignment" do
       seqs = %w[ABC- AB-D A-CD -BCD]
@@ -135,6 +180,20 @@ RSpec.describe PasvLib::Alignment do
         similarity_score = klass.similarity_score [s1, s2, s3], Blosum::BLOSUM45
 
         expect(similarity_score).to eq actual_points / max_points.to_f
+      end
+
+      it "can take alternate similarity matrices" do
+        scoring_matrix = {
+          "A" => { "A" => 4, "C" => 2 },
+          "C" => { "C" => 6, "A" => 2 }
+        }
+
+        s1 = "AC"
+        s2 = "AA"
+
+        expected = (4 + 2) / (4 + 6).to_f
+
+        expect(klass.similarity_score [s1, s2], scoring_matrix).to eq expected
       end
     end
 
