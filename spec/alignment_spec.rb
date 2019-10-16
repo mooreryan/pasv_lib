@@ -37,6 +37,30 @@ RSpec.describe PasvLib::Alignment do
         expect(actual).to eq expected
       end
     end
+
+    context "alignments with spaces" do
+      it "ignores spaces in alignment" do
+        seqs = ["A B - C", "ab-c"]
+        expected = [
+          %w[A a],
+          %w[B b],
+          %w[- -],
+          %w[C c]
+        ]
+
+        actual = klass.alignment_columns seqs
+
+        expect(actual).to eq expected
+      end
+    end
+
+    context "seqs are not all the same length" do
+      it "raises an error" do
+        seqs = %w[abcde abc]
+
+        expect{klass.alignment_columns seqs}.to raise_error PasvLib::Error
+      end
+    end
   end
 
   describe "#similarity_score" do
