@@ -180,6 +180,18 @@ RSpec.describe PasvLib::Alignment do
     end
   end
 
+  describe "#gap?" do
+    it "is truthy if residue is a gap" do
+      expect(klass.gap? "-").to be_truthy
+      expect(klass.gap? ".").to be_truthy
+    end
+
+    it "is falsey if residue is a gap" do
+      expect(klass.gap? "A").to be_falsey
+      expect(klass.gap? "r").to be_falsey
+    end
+  end
+
   describe "#geometric_index" do
     it "calculates the geometric index" do
       s1 = 'A-N--' # 01011

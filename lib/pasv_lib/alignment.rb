@@ -3,6 +3,7 @@ require "set"
 
 module PasvLib
   module Alignment
+    # If you need to check if a residue is a gap, use this Set.
     GAP_CHARS = Set.new %w[- .]
 
     # If the overall min of the scoring matrix is < 0, then this scales it so that the overall min becomes zero.
@@ -55,6 +56,10 @@ module PasvLib
       end.transpose
     end
 
+    def gap? residue
+      GAP_CHARS.include? residue
+    end
+
     # Calculate the geometric index for an alignment.
     #
     # Basically, you change all residues to 0 and all gaps to 1.  Then you take the permutations of the sequences and then the residues and XOR each of the permutations.  Then you add it up and take averages and you'll get the score.  That is a pretty bad explanation, so see http://merenlab.org/2016/11/08/pangenomics-v2/#geometric-homogeneity-index for more information.
@@ -97,7 +102,10 @@ module PasvLib
       (by_seq_score + by_residue_score) / 2.0
     end
 
-    # @note Technically you could get a negative score if you don't have enough high scoring residue pairs to keep the total score above zero.  If this is the case, you're alignment probably isn't very good.
+    # @raise PasvLib::Error if seqs is empty
+    # @raise PasvLib::Error if max_points is zero.  Could happen if one of the seqs has all gaps, or no omparisons could be made.
+    #
+    # @note Technically you could get a negative score if you don't have enough high scoring residue pairs to keep the total score above zero.  If this is the case, you're alignment probably isn't very good.  Alternatively, you could use #adjust_scoring_matrix to avoid this issue....
     def similarity_score seqs, scoring_matrix = Blosum::BLOSUM62
       raise PasvLib::Error if seqs.empty?
       return 1.0 if seqs.count == 1
@@ -109,7 +117,7 @@ module PasvLib
 
       aln_cols.each do |residues|
         residues.map(&:upcase).combination(2).each do |r1, r2|
-          unless GAP_CHARS.include?(r1) || GAP_CHARS.include?(r2)
+          unless gap?(r1) || gap?(r2)
             r1_max_score = scoring_matrix[r1].values.max
             r2_max_score = scoring_matrix[r2].values.max
             pair_max     = [r1_max_score, r2_max_score].max
@@ -139,7 +147,7 @@ module PasvLib
       aln.map do |seq|
         seq.chars.map do |char|
           # Gaps turn to 1, residues turn to 0.
-          GAP_CHARS.include?(char) ? 1 : 0
+          gap?(char) ? 1 : 0
         end
       end
     end
