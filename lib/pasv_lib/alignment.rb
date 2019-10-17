@@ -55,6 +55,58 @@ module PasvLib
       end.transpose
     end
 
+    def geometric_score aln, by
+      if by == "sequence"
+        binary_aln = to_binary_matrix aln
+      elsif by == "residue"
+        binary_aln = to_binary_matrix aln.transpose
+      else
+        raise PasvLib::Error, "by must be either 'sequence' or 'residue'"
+      end
+
+      num_rows = binary_aln.length
+      max_differences_per_row = binary_aln.first.length
+      num_comparisions_per_row = num_rows - 1
+
+      binary_aln.permutation(2).map do |(row1, row2)|
+        diffs = row1.zip(row2).map do |elem1, elem2|
+          elem1 ^ elem2
+        end.sum / max_differences_per_row.to_f
+      end.sum / num_comparisions_per_row.to_f / num_rows
+    end
+
+    def geometric_index aln
+      binary_aln_by_seq = to_binary_matrix aln
+      binary_aln_by_residue = binary_aln_by_seq.transpose
+
+      num_seqs = aln.count
+      num_aln_cols = aln.first.length
+
+      max_diffs_per_aln_col = num_seqs
+      max_diffs_per_seq = num_aln_cols
+
+      num_comparisons_per_aln_col = num_aln_cols - 1
+      num_comparisions_per_seq = num_seqs - 1
+
+      by_seq_scores = binary_aln_by_seq.permutation(2).map do |(s1, s2)|
+        diffs = s1.zip(s2).map do |elem1, elem2|
+          elem1 ^ elem2
+        end.sum / max_diffs_per_seq.to_f
+      end.sum / num_comparisions_per_seq.to_f
+
+      by_seq_score = by_seq_scores / num_seqs.to_f
+
+      by_residue_scores = binary_aln_by_residue.permutation(2).map do |(s1, s2)|
+        diffs = s1.zip(s2).map do |elem1, elem2|
+          elem1 ^ elem2
+        end.sum / max_diffs_per_aln_col.to_f
+      end.sum / num_comparisons_per_aln_col.to_f
+
+      by_residue_score = by_residue_scores / num_seqs.to_f
+
+      (by_seq_score + by_residue_score) / 2
+    end
+
     # @note Technically you could get a negative score if you don't have enough high scoring residue pairs to keep the total score above zero.  If this is the case, you're alignment probably isn't very good.
     def similarity_score seqs, scoring_matrix = Blosum::BLOSUM62
       raise PasvLib::Error if seqs.empty?
@@ -86,6 +138,20 @@ module PasvLib
       end
 
       actual_points / max_points.to_f
+    end
+
+    # Convert an aligment to a binary matrix where 1 represents gaps and 0 represents residues.
+    #
+    # @param aln [Array<String>] an array of (aligned) sequences
+    #
+    # @return [Array<Array<integer>>] an array of arrays.  Each row is a sequence.
+    def to_binary_matrix aln
+      aln.map do |seq|
+        seq.chars.map do |char|
+          # Gaps turn to 1, residues turn to 0.
+          GAP_CHARS.include?(char) ? 1 : 0
+        end
+      end
     end
   end
 end
