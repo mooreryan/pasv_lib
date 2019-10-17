@@ -55,56 +55,46 @@ module PasvLib
       end.transpose
     end
 
+    # Calculate the geometric index for an alignment.
+    #
+    # Basically, you change all residues to 0 and all gaps to 1.  Then you take the permutations of the sequences and then the residues and XOR each of the permutations.  Then you add it up and take averages and you'll get the score.  That is a pretty bad explanation, so see http://merenlab.org/2016/11/08/pangenomics-v2/#geometric-homogeneity-index for more information.
+    #
+    # @param aln [Array<String>] aligned sequenecs
+    # @param by [String] either "sequence" or "residue".  Controls whether to do the calculation by sequence, or by residue.
+    #
+    # @return [Float] a score between 0 and 1, with 1 being very homogeneous and 1 being very heterogeneous.
+    #
+    # @note The original Anvi'o code uses a clever bitshifting scheme to avoid storing array of arrays.  It may also speed up the XOR part as you're doing fewer XORs, but I'm not positive about that.
     def geometric_score aln, by
-      if by == "sequence"
-        binary_aln = to_binary_matrix aln
-      elsif by == "residue"
-        binary_aln = to_binary_matrix aln.transpose
-      else
-        raise PasvLib::Error, "by must be either 'sequence' or 'residue'"
+      binary_aln = to_binary_matrix aln
+
+      if by == "residue"
+        binary_aln = binary_aln.transpose
       end
 
       num_rows = binary_aln.length
       max_differences_per_row = binary_aln.first.length
       num_comparisions_per_row = num_rows - 1
 
-      binary_aln.permutation(2).map do |(row1, row2)|
-        diffs = row1.zip(row2).map do |elem1, elem2|
+      diff_score = binary_aln.permutation(2).map do |(row1, row2)|
+        row1.zip(row2).map do |elem1, elem2|
           elem1 ^ elem2
         end.sum / max_differences_per_row.to_f
       end.sum / num_comparisions_per_row.to_f / num_rows
+
+      1 - diff_score
     end
 
+    # A wrapper for #geometric_score that takes the average of the by sequence and by residue scores for an alignment.
+    #
+    # @param aln [Array<String>] aligned sequenecs
+    #
+    # @return [Float] a score between 0 and 1, with 1 being very homogeneous and 1 being very heterogeneous.
     def geometric_index aln
-      binary_aln_by_seq = to_binary_matrix aln
-      binary_aln_by_residue = binary_aln_by_seq.transpose
+      by_seq_score = geometric_score aln, "sequence"
+      by_residue_score = geometric_score aln, "residue"
 
-      num_seqs = aln.count
-      num_aln_cols = aln.first.length
-
-      max_diffs_per_aln_col = num_seqs
-      max_diffs_per_seq = num_aln_cols
-
-      num_comparisons_per_aln_col = num_aln_cols - 1
-      num_comparisions_per_seq = num_seqs - 1
-
-      by_seq_scores = binary_aln_by_seq.permutation(2).map do |(s1, s2)|
-        diffs = s1.zip(s2).map do |elem1, elem2|
-          elem1 ^ elem2
-        end.sum / max_diffs_per_seq.to_f
-      end.sum / num_comparisions_per_seq.to_f
-
-      by_seq_score = by_seq_scores / num_seqs.to_f
-
-      by_residue_scores = binary_aln_by_residue.permutation(2).map do |(s1, s2)|
-        diffs = s1.zip(s2).map do |elem1, elem2|
-          elem1 ^ elem2
-        end.sum / max_diffs_per_aln_col.to_f
-      end.sum / num_comparisons_per_aln_col.to_f
-
-      by_residue_score = by_residue_scores / num_seqs.to_f
-
-      (by_seq_score + by_residue_score) / 2
+      (by_seq_score + by_residue_score) / 2.0
     end
 
     # @note Technically you could get a negative score if you don't have enough high scoring residue pairs to keep the total score above zero.  If this is the case, you're alignment probably isn't very good.
