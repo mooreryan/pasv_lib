@@ -313,6 +313,19 @@ RSpec.describe PasvLib::Alignment do
           expect(similarity_score).to eq actual_points / max_points.to_f
         end
       end
+
+      context "residues that don't exist in the scoring matrix" do
+        it "raises a useful error" do
+          s1 = "ABCDE"
+
+          scoring_matrix = {
+            "A" => { "A" => 4, "C" => 2 },
+            "C" => { "C" => 6, "A" => 2 }
+          }
+
+          expect { klass.similarity_score [s1, s1], scoring_matrix }.to raise_error PasvLib::Error
+        end
+      end
     end
   end
 

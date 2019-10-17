@@ -45,7 +45,7 @@ module PasvLib
     #   klass.alignment_columns ["AA-", "A-A"] #=> [["A", "A"], ["A", "-"], ["-", "A"]]
     def alignment_columns seqs
       seqs_no_spaces = seqs.map { |seq| seq.tr " ", "" }
-      len = seqs_no_spaces.first.length
+      len            = seqs_no_spaces.first.length
 
       seqs_no_spaces.map do |seq|
         unless seq.length == len
@@ -77,8 +77,8 @@ module PasvLib
         binary_aln = binary_aln.transpose
       end
 
-      num_rows = binary_aln.length
-      max_differences_per_row = binary_aln.first.length
+      num_rows                 = binary_aln.length
+      max_differences_per_row  = binary_aln.first.length
       num_comparisions_per_row = num_rows - 1
 
       diff_score = binary_aln.permutation(2).map do |(row1, row2)|
@@ -96,12 +96,17 @@ module PasvLib
     #
     # @return [Float] a score between 0 and 1, with 1 being very homogeneous and 1 being very heterogeneous.
     def geometric_index aln
-      by_seq_score = geometric_score aln, "sequence"
+      by_seq_score     = geometric_score aln, "sequence"
       by_residue_score = geometric_score aln, "residue"
 
       (by_seq_score + by_residue_score) / 2.0
     end
 
+    # Returns the similarity score for the alignment.
+    #
+    # For each colunm, each pair of residues are scored using the similarity matrix to get a points accrued / max_points.  Then all column scores are averaged.
+    #
+    # @raise PasvLib::Error if any residue is not present in the scoring matrix.
     # @raise PasvLib::Error if seqs is empty
     # @raise PasvLib::Error if max_points is zero.  Could happen if one of the seqs has all gaps, or no omparisons could be made.
     #
@@ -118,6 +123,14 @@ module PasvLib
       aln_cols.each do |residues|
         residues.map(&:upcase).combination(2).each do |r1, r2|
           unless gap?(r1) || gap?(r2)
+            # Check that scoring matrix has the residues.
+            [r1, r2].each do |res|
+              unless scoring_matrix.has_key? res
+                raise PasvLib::Error, "Residue '#{res}' is missing from the " \
+                                    "scoring matrix."
+              end
+            end
+
             r1_max_score = scoring_matrix[r1].values.max
             r2_max_score = scoring_matrix[r2].values.max
             pair_max     = [r1_max_score, r2_max_score].max
