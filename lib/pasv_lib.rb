@@ -1,6 +1,8 @@
 require "pasv_lib/error"
 require "pasv_lib/alignment"
+require "pasv_lib/io"
 require "pasv_lib/version"
+
 require File.join __dir__, "..", "vendor", "systemu"
 
 module PasvLib

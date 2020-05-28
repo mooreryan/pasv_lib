@@ -12,3 +12,7 @@ RSpec.configure do |config|
     c.syntax = :expect
   end
 end
+
+module SpecHelper
+  TEST_FILE_DIR = File.join __dir__, "test_files"
+end

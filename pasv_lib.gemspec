@@ -25,4 +25,5 @@ Gem::Specification.new do |spec|
   spec.add_development_dependency "rspec", "~> 3.0"
 
   spec.add_runtime_dependency "blosum", "~> 0.1.0"
+  spec.add_runtime_dependency "parse_fasta", "~> 2.5.2"
 end
